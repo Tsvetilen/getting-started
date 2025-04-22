@@ -33,7 +33,7 @@ jobs:
 
       # Deploy to Azure Container Instances
       - name: Deploy to Azure Container Instances
-        uses: azure/aci-deploy@v1
+        uses: azure/aci-deploy@v4
         with:
           cpu: 1
           memory: 1.5
