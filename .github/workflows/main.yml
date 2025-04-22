@@ -17,7 +17,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Log in to ACR
+      # Log in to Azure Container Registry (ACR)
       - name: Login to ACR
         uses: docker/login-action@v3
         with:
@@ -31,18 +31,27 @@ jobs:
           docker build ./app -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
 
-      # Deploy to Azure Container Instances
+      # Clean up existing ACI instance to avoid DNS conflicts
+      - name: Clean up old ACI instance
+        run: |
+          az container delete --resource-group ${{ secrets.RESOURCE_GROUP }} --name getting-started-github --yes
+        continue-on-error: true
+
+      # Deploy to Azure Container Instances with corrected ACI configuration
       - name: Deploy to Azure Container Instances
         uses: azure/aci-deploy@v1
         with:
-          cpu: 1
-          memory: 1.5
-          ports: 3000
           resource-group: ${{ secrets.RESOURCE_GROUP }}
-          dns-name-label: getting-started-${{ github.run_number }}
+          name: getting-started-github
           image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ secrets.REPOSITORY_NAME }}:${{ github.run_number }}
           registry-login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-password: ${{ secrets.REGISTRY_PASSWORD }}
-          name: getting-started-github
+          cpu: 1
+          memory: 1.5
+          ports: 3000
+          dns-name-label: getting-started-${{ github.sha }} # Unique DNS label using commit SHA
           location: westeurope
+          ip-address: Public
+          protocol: TCP
+          restart-policy: Always
